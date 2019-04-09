@@ -1,16 +1,22 @@
-= Using IPv6 With Couchbase
+= Using IPv6 With Couchbase Server
+:page-edition: Enterprise
 
 [abstract]
 Couchbase Server supports IP version 6 (IPv6).
-Set-up is required for each platform.
-
-[caption=Attention]
-IMPORTANT: IPv6 support is only available in Couchbase Server Enterprise Edition.
+You can set up IPv6 on new clusters, or upgrade existing clusters from IPv4 to IPv6.
 
 [#ipv6-overview]
-== IPv6 Overview
+== Overview
 
-By default, when Couchbase Server starts up it uses IPv4.
+By default, new installations of Couchbase Server start up using IPv4.
+
+
+IPv6 on new clusters::
+By default, new installations of Couchbase Server start up using IPv4.
+This has the implication of requiring that you convert the first node to use IPv6 before you initialize the cluster.  on a new cluster, each node needs to be converted to IPv6 before you add them 
+
+By default, new installations of Couchbase Server start up using IPv4.
+That means when you set up IPv6 on a new cluster, each node needs to be converted to IPv6 before you add them 
 To enable IPv6, set-up is required for each platform, as described in the sections below.
 Note that the steps for Linux and macOS are to be performed _after_ the basic Couchbase Server installation is complete, and the steps for Windows are integrated into the basic installation procedure itself.
 
