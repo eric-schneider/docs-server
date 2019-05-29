@@ -1,5 +1,6 @@
-= Using IPv6 With Couchbase Server
+= Using IPv6
 :page-edition: Enterprise
+:tabs:
 
 [abstract]
 Couchbase Server supports IP version 6 (IPv6).
@@ -8,21 +9,236 @@ You can set up IPv6 on new clusters, or upgrade existing clusters from IPv4 to I
 [#ipv6-overview]
 == Overview
 
+By default, new installations of Couchbase Server start up in IPv4 mode.
+This means that when you set up a cluster to use IPv6, you need to enable IPv6 on each node before adding them to the cluster.
+IPv6 is enabled for a cluster only when IPv6 is enabled on all of its nodes.
+
+There are two different ways to enable IPv6:
+
+* Using <<ipv6-setup-dist-cfg,`dist_cfg` (recommended)>>
+** Requires Couchbase Server 5.5.3+ or 6.0.1+
+* Using <<ipv6-setup-static-config,`static_config`>>
+** Requires Couchbase Server 5.5.0+
+** Does not persist through upgrade
+
+[NOTE]
+====
+IPv6 support was introduced in Couchbase Server 5.5.
+At the time, the only supported method to configure IPv6 was to edit the `static_config` file
+
+However, the mechanism for IPv6 support changed in 5.5.3 and 6.0.1.
+For information regarding IPv6 support in 5.5.0, 5.5.1, 5.5.2, and 6.0.0, refer to <<legacy-ipv6-config,Legacy IPv6 Configuration>>.
+====
+
+[#ipv6-setup-dist-cfg]
+== Set Up IPv6 Using `dist_cfg` (Recommended)
+
+When you set up a new cluster to use IPv6, you should make sure to convert the first node to IPv6 before you initialize the cluster.
+
+[{tabs}]
+==== 
+Linux:: 
++ 
+-- 
+. Install Couchbase Server.
++
+By default, Couchbase Server will start up in IPv4 mode.
++
+Refer to xref:install-linux.adoc[Installing on Linux] for more information about installing Couchbase Server on Linux systems.
+
+. Enable IPv6 mode.
++
+Execute the following REST API on the node to configure it to run in IPv6 mode:
++
+[source,console]
+----
+curl -X POST -u <username>:<password> -d ‘afamily=ipv6’ http://localhost:8091/node/controller/setupNetConfig
+----
++
+...where `<username>:<password>` is the username and password of a Full Administrator.
++
+[NOTE]
+=====
+If the system on which you've installed Couchbase Server doesn't have a loopback interface with the 127.0.0.1 address assigned, then you won't be able to execute the above REST API because the web server won't be available.
+If this is the case, you'll need to do the following instead:
+
+. Stop Couchbase Server.
++
+[source,console]
+----
+sudo systemctl stop couchbase-server
+----
+
+. Add the following entry to `/opt/couchbase/var/lib/couchbase/config/dist_cfg`:
++
+[source,console]
+----
+{dist_type, inet6_tcp}
+----
+=====
+
+. Restart Couchbase Server.
++
+[source,console]
+----
+sudo systemctl restart couchbase-server
+----
+--
+
+macOS::
++
+--
+. Install Couchbase Server.
++
+By default, Couchbase Server will start up in IPv4 mode.
++
+Refer to xref:macos-install.adoc[Installing on macOS] for more information about installing Couchbase Server on macOS systems.
+
+. Enable IPv6 mode.
++
+Execute the following REST API to configure the node to run in IPv6 mode:
++
+[source,console]
+----
+curl -X POST -u <username>:<password> -d ‘afamily=ipv6’ http://localhost:8091/node/controller/setupNetConfig
+----
++
+...where `<username>:<password>` is the username and password of a Full Administrator.
+Couchbase Server must be running for this command to succeed.
++
+[NOTE]
+=====
+If the system on which you've installed Couchbase Server doesn't have a loopback interface with the 127.0.0.1 address assigned, then you won't be able to execute the above REST API because the web server won't be available.
+If this is the case, you'll need to do the following instead:
+
+. Stop Couchbase Server.
++
+[source,console]
+----
+sudo systemctl stop couchbase-server
+----
+
+. Add the following entry to `/Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/var/lib/couchbase/config/dist_cfg`:
++
+[source,console]
+----
+{dist_type, inet6_tcp}
+----
+=====
+
+. Restart Couchbase Server.
++
+[source,console]
+----
+sudo systemctl restart couchbase-server
+----
+--
+
+Windows::
++
+--
+IPv6 set-up requirements are incorporated into the InstallShield wizard itself.
+During installation of the Couchbase package, a check box is available to enable IPv6 mode.
+(Note that after installation, any subsequent mode-change requires re-installation.)
+--
+====
+
+== IPv6 Setup on Existing Clusters
+
+????
+
+
+
+
+
+
+[#ipv6-setup-static-config]
+== Legacy IPv6 Configuration
+
+[IMPORTANT]
+====
+This section applies to clusters running Couchbase Server 5.5.0, 5.5.1, 5.5.2, and 6.0.0.
+The mech
+A new mechanism for IPv6 support was introduced in 5.5.3 and 6.0.1.
+If you're planning on switching to IPv6, it's recommended that you upgrade to 5.5.3+ or 6.0.1+ first, since the new IPv6 support mechanism is preferred.
+====
+
 By default, new installations of Couchbase Server start up using IPv4.
+This means that when you set up a cluster to use IPv6, you need to convert each node from IPv4 to IPv6 before adding them to the cluster.
+IPv6 is enabled for a cluster only when IPv6 is enabled on all of its nodes.
 
 
-IPv6 on new clusters::
-By default, new installations of Couchbase Server start up using IPv4.
-This has the implication of requiring that you convert the first node to use IPv6 before you initialize the cluster.  on a new cluster, each node needs to be converted to IPv6 before you add them 
+[{tabs}]
+==== 
+Linux:: 
++ 
+-- 
+. Install Couchbase Server.
++
+By default, Couchbase Server will start up in IPv4 mode.
++
+Refer to xref:install-linux.adoc[Installing on Linux] for more information about installing Couchbase Server on Linux systems.
 
-By default, new installations of Couchbase Server start up using IPv4.
-That means when you set up IPv6 on a new cluster, each node needs to be converted to IPv6 before you add them 
-To enable IPv6, set-up is required for each platform, as described in the sections below.
-Note that the steps for Linux and macOS are to be performed _after_ the basic Couchbase Server installation is complete, and the steps for Windows are integrated into the basic installation procedure itself.
+. Stop Couchbase Server.
++
+[source,console]
+----
+sudo systemctl stop couchbase-server
+----
 
-NOTE: In a clustered setup, IPv6 is enabled only when IPv6 is enabled on all of the nodes.
+. Open `/opt/couchbase/etc/couchbase/static_config` in a text editor and set `ipv6` to `true`.
+Save the file and exit your text editor.
 
-See xref:install-intro.adoc[Installing the Couchbase Server Cluster] for more information about installation procedures.
+. Delete `/opt/couchbase/var/lib/couchbase/config/config.dat`.
+
+. Restart Couchbase Server.
++
+[source,console]
+----
+sudo systemctl restart couchbase-server
+----
+--
+
+macOS::
++
+--
+. Install Couchbase Server.
++
+By default, Couchbase Server will start up in IPv4 mode.
++
+Refer to xref:macos-install.adoc[Installing on macOS] for more information about installing Couchbase Server on macOS systems.
+
+. Stop Couchbase Server.
+(Quit the Couchbase Server application if it is running.)
+
+. Enable IPv6 mode.
++
+Open `/Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/etc/couchbase/static_config.in` in a text editor and set `ipv6` to `true`.
+Save the file and exit your text editor.
+
+. Delete `/Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/var/lib/couchbase/config/config.dat`.
++
+[source,console]
+----
+rm -rf /Applications/Couchbase\ Server.app/Contents/Resources/couchbase-core/var/lib/couchbase/config/config.dat
+----
+
+. Start Couchbase Server.
+(Open the Couchbase Server application.)
+--
+
+Windows::
++
+--
+IPv6 set-up requirements are incorporated into the InstallShield wizard itself.
+During installation of the Couchbase package, a check box is available to enable IPv6 mode.
+(Note that after installation, any subsequent mode-change requires re-installation.)
+--
+====
+
+Couchbase should now be running in IPv6 mode.
+To check, point a supported web browser to  `http://[::1]:8091`, which is the IPv6 address and port number on which Couchbase Server should be running.
+The Couchbase Server Web Console login screen should display.
 
 [#linux-ipv6-setup]
 == IPv6 Set-Up for Linux
@@ -54,3 +270,29 @@ After you install the Couchbase Server application, proceed as follows:
 . Delete `~/Library/Application\ Support/Couchbase/var/lib/couchbase/config/config.dat`.
 . Restart the `couchbase-server` service (this starts Couchbase Server in IPv6 mode).
 To check, point a supported web browser to  `http://[::1]:8091`, which is the IPv6 address and port number on which Couchbase Server should be running.
+
+== Upgrading from IPv4 to IPv6
+
+The simplest method for upgrading a Couchbase deployment from IPv4 to IPv6 is to create new clusters with IPv6 already enabled, and then migrate your data to them using Cross Data Center Replication (XDCR).
+
+=== Migrate from IPv4 to IPv6 Using XDCR
+
+.Prerequisites:
+* The source cluster must have dual stack support at the OS-level.
+* The source and destination clusters must be running Couchbase Server 5.5 or later.
+
+.Procedure:
+. Create a new cluster with IPv6 <<ipv6-setup-dist-cfg,enabled and configured>> to be the destination cluster.
++
+This cluster needs to be sized appropriately for the workload, but doesn't need to be identical to the source cluster.
+
+. Create a cluster reference and replication stream from the source to the destination cluster.
+
+. Monitor the XDCR queue from the source until all mutations are replicated to the destination cluster.
+
+. Reconfigure your applications to start accessing the destination cluster.
+
+. Once all applications are moved, the source cluster can be decommissioned.
+
+NOTE: IPv4 and IPv6 clusters cannot be paired for bi-directional XDCR replication.
+For bi-directional replication, both clusters need to be using the same protocol (either both IPv4, or both IPv6).
