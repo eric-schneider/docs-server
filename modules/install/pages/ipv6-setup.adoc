@@ -21,10 +21,11 @@ This issue was resolved in 5.5.3 and 6.0.1 with a new method of enabling IPv6.
 
 .How to Enable IPv6
 * For new clusters, see <<ipv6-setup-dist-cfg,IPv6 Setup>>.
-** Requires Couchbase Server 5.5.3+ and 6.0.1+
+** Requires Couchbase Server 5.5.3+ or 6.0.1+
 * For existing IPv4-based clusters, see <<upgrade-from-ipv4,Upgrading from IPv4 to IPv6>>.
-** Requires Couchbase Server 5.5.3+ and 6.0.1+
+** Requires Couchbase Server 5.5.3+ or 6.0.1+
 * For existing clusters that already have IPv6 enabled using `static_config`, see <<ipv6-setup-static-config,Legacy IPv6 Setup>>.
+** Only for clusters running Couchbase Server 5.0.0, 5.0.1, 5.0.2, or 6.0.0
 
 ////
 There are two different ways to enable IPv6:
@@ -39,12 +40,9 @@ There are two different ways to enable IPv6:
 [#ipv6-setup-dist-cfg]
 == IPv6 Setup
 
-[IMPORTANT]
-====
 This setup requires Couchbase Server 5.5.3+ or 6.0.1+.
 
 If your cluster is running Couchbase Server 5.5.0, 5.5.1, 5.5.2, or 6.0.0 *and* already has IPv6 enabled using the older `static_config` method, see <<ipv6-setup-static-config,Legacy IPv6 Setup>>.
-====
 
 [{tabs}]
 ==== 
