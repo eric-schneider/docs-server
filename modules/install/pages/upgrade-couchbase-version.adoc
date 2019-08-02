@@ -1,2 +1,118 @@
 = Upgrade to Couchbase Server 6.5
 :page-aliases: install:upgrade-strategy-for-features,
+
+This page shows you how to upgrade to the latest 6.5 release, incurring little to no downtime.
+
+== Step 1: Verify that you're ready for upgrade
+
+Couchbase Server supports direct upgrades up to one major version ahead.
+That means, you can upgrade to version 6.5 from any version in the 5.x or 6.0.x series of releases.
+
+If you're upgrading from a version older than 5.x, you need to upgrade to an intermediate release before you can upgrade to version 6.5.
+You can review the supported xref:upgrade.adoc#upgrade-paths[upgrade paths] to better understand your options. 
+
+== Step 2: Plan Your Upgrade Strategy
+
+Upgrading a Couchbase cluster is accomplished by upgrading each of its constituent nodes to a new version.
+The most common way to go about this is to perform a _rolling online upgrade_.
+Only once all of the nodes are running the same version, will the cluster be considered fully upgraded.
+Up until that point, if any node in the cluster is running a different version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
+
+Even though all nodes in a cluster have Couchbase Server installed on them, each node might only run one or more Couchbase xref:learn:services-and-indexes/services/services.adoc[Services].
+Some nodes might run the Data Service, while other nodes might be responsible for Index, Query, etc.
+This has two practical implications:
+
+. When you take a node offline to 
+. When Couchbase Server is upgraded on a node, all of the services on that node are upgraded as well.
+
+
+
+In most production environments, each workload is isolated to its own set of nodes.
+There are special considerations for most online upgrade options in an MDS cluster.
+For more information on this, see xref:upgrade-online.adoc[Performing the Rolling Online Upgrade].
+
+
+During the upgrade, your cluster can have a mix of the new and current versions of the query, index, or data services.
+
+== Data Service
+
+You can upgrade the Data service from version 4.0 directly to the latest version 4.1 using any supported upgrade strategy
+
+== Index Service
+
+The Index service with global secondary indexes (GSI) does not provide built-in replicas.
+Administrators need to create identical indexes on the separate index service nodes to gain high availability.
+
+The Index service also comes with no rebalancing support.
+When a node is removed, GSI on that node are also removed and not moved to another node.
+The index traffic is automatically moved to another node that contains an identical index so that the application does not experience downtime.
+However, when the upgraded Index service node is brought back into the cluster, administrators have to rebuild the indexes on this node again.
+
+When upgrading the Index service, make sure to fulfill these requirements:
+
+* Before you upgrade an index service node, ensure there are identical indexes on other index service nodes for each index on the node being upgraded.
+* Upgrade the node with the Index service and add it back to the cluster using one of the recommended techniques (swap rebalance, offline upgrade, and so on).
+* Recreate all indexes on the upgraded node.
+
+== Query Service
+
+The Query service can be upgraded to a new version by taking the node offline.
+However, there are few things to keep in mind:
+
+* Make sure there are no running or executing queries since those will be killed when the node is taken offline.
+* To avoid downtime for your application, add a new query service node with the new version and swap the older node out.
+
+
+== Step 2: Prepare for the Upgrade
+
+Before upgrading your production cluster, be sure to practice and verify the upgrade on a test environment first.
+The test environment should match your production environment as closely as possible.
+
+If you can, it is best to upgrade during off hours.
+Avoid upgrading during the system’s peak usage times.
+Even though rebalances are designed to be a background process, they can sometimes impact performance.
+
+
+== Performing the Rolling Online Upgrade
+
+[abstract]
+A rolling online upgrade is the recommended upgrade process for a Couchbase cluster.
+
+== Swap Rebalance Example
+
+You can perform a swap rebalance to upgrade your Couchbase Server nodes without reducing your cluster performance due to diminished capacity from missing nodes.
+
+You need at least one extra node to perform a swap rebalance.
+If you are unable to perform an upgrade via swap rebalance, perform a standard online upgrade instead.
+
+*Without a spare node available*
+
+If you don't have an extra node available, and you have enough cluster capacity to service requests after removing one of the nodes, prepare for swap rebalance by first removing an existing node to serve as the initial swap node:
+
+. Back up the entire cluster.
+. Remove one node from the cluster by selecting menu:Manage[Server Nodes, Remove Server] for the node you wish to remove.
+. Click [.in]`Rebalance`.
+. Proceed with the instructions.
+
+== Swap Rebalance Example with an Extra Node Available
+
+. Install the latest version of Couchbase Server on the extra node that is not yet a part of the cluster.
+For instructions see xref:upgrade-individual-nodes.adoc[Performing the Single Node Upgrade].
+. Create a backup of your cluster data using the xref:cli:cbbackup-tool.adoc[cbbackup tool].
+. Open the Couchbase Web Console on an existing cluster node.
+. Select menu:Servers[Active Servers] to view and manage the cluster nodes.
+. Click [.ui]*Add Server*.
+. In the [.ui]*Add Server* dialog, provide either a hostname or IP address for the new node to be added.
+Enter your Couchbase Server administrative credentials in the fields [.ui]*Username* and [.ui]*Password* and select the appropriate service.
+. Remove one of your existing old nodes from the cluster.
++
+Under menu:Server Nodes[Servers], click [.ui]*Remove* for the node you want to remove to mark it for removal.
+
+. In the [.ui]*Servers* panel, click [.ui]*Rebalance*.
+The rebalance process moves data from the existing node to your newly added node.
+
+Repeat these steps for all the remaining old nodes in the cluster.
+You can add and remove multiple nodes from a cluster.
+However, always add the same number of nodes from the cluster as you remove.
+
+For example, the addition of 4 nodes and the removal of 4 nodes is classed as a swap rebalance, but the addition of 7 nodes and removal of 4 nodes is not.
