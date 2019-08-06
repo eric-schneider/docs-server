@@ -6,19 +6,54 @@ Because of Couchbase Server's distributed architecture, several options are avai
 These options accommodate the needs of a wide array of deployment topologies, while also incurring little to no downtime.
 
 Upgrading Couchbase Server regularly is crucial to your cluster's overall health.
-Upgrades let you take advantage of the latest bug fixes, enhancements, and features, while also ensuring that your cluster is fully supported in accordance with the http://www.couchbase.com/support-policy[Couchbase Support Policy^]
+Upgrades let you take advantage of the latest bug fixes, enhancements, and features, while also ensuring that your cluster is fully supported in accordance with the http://www.couchbase.com/support-policy[Couchbase Support Policy^].
 Review the xref:release-notes:relnotes.adoc[release notes] for each release to understand if there are bugs that might affect your deployments, or if there are new features that you can take advantage of.
+
+== How Upgrade Works
+
+Upgrading a Couchbase cluster is accomplished by upgrading each of the cluster's constituent nodes to a new version of Couchbase Server.
+Only once all of the nodes are running the new version will the cluster be considered fully upgraded.
+Up until that point, if any node in the cluster is running the old version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
+
+=== Upgrade Types
+
+There are two principal types of upgrade: _online_ and _offline_.
+
+* _Online_: The cluster remains active and available while each node is upgraded.
+Nodes running the previous version of Couchbase Server need to be swapped with nodes that are running the new version of Couchbase Server.
+Swapping in brand-new nodes requires the fewest rebalances, and thus requires the least amount of time for completing the upgrade.
+However, online upgrades _can_ be completed using only the nodes currently in the cluster.
++
+When performing an online upgrade, it's important to know that nodes do not need to be upgraded _in-place_.
+That is to say: Even if you remove a node from a cluster, upgrade the Couchbase Server installation on that node, and then finally add that node back into the cluster, the cluster will still treat it like a brand new node, and will wipe any pre-existing data from the node.
+This is because when you safely remove a node from an active cluster, that node passes all of its data to other online nodes, at which point that data can be changed at any time by a cluster user.
+By treating every node as a new node, the cluster keeps data consistent.
+
+* _Offline_: The cluster is taken offline while nodes are upgraded individually.
+For these upgrades to be performed safely, all application traffic to the entire cluster must be shut down.
++
+Unlike with online upgrades, an offline upgrade requires that each node be upgraded _in place_.
+This means that the existing Couchbase Server installation on each node needs to be upgraded to the new version, with the existing data preserved.
+After the upgrade is complete, the nodes warm up and the cluster comes back online at full capacity.
+At this point, application traffic can resume to the upgraded cluster.
+
+Although you'll ultimately need to determine the best type of upgrade for your particular deployment, an online upgrade is recommended in almost all scenarios.
+
+== Online Upgrades
+
+Online upgrade, also known as _rolling online upgrade_, is the preferred upgrade type and should be used unless special circumstances rule it out.
+This type doesn't cause downtime, since it uses Couchbase's rebalance capability to redistribute data amongst cluster nodes, keeping it available for the duration of the upgrade.
 
 [#upgrade-paths]
 == Supported Upgrade Paths
 
 Couchbase Server supports direct upgrades up to a maximum of one _major_ version ahead.
 You can skip _minor_ and _maintenance_ versions (X.*_Y_*.*_Z_*), but you cannot skip a major version.
-That means, if you're more than one major version behind, you'll need to upgrade to each intermediate major version, one-by-one, before arriving at the desired version. 
+That means, if you're more than one major version behind, you'll need to upgrade to an intermediate major version before arriving at the desired version. 
 
 When upgrading to a new major version, it's highly recommended that you upgrade to the latest release of that major version.
 This is made easier by the fact that each release of Couchbase Server contains the full software (even maintenance releases).
-So, for example, if a cluster is running version 4.x, you could upgrade directly to version 5.5.5 with a single package.
+So, for example, if a cluster is running version 4.x, it can be upgraded directly to version 5.5.5 with a single package.
 
 .Couchbase Server Enterprise Edition Upgrade Paths
 [#table-upgrade-enterprise]
@@ -70,10 +105,11 @@ This information can be found in the http://www.couchbase.com/support-policy[Cou
 Once you begin upgrading a Couchbase cluster, you can still roll back to the previous version, as long as at least one node is still on the previous version.
 For example, if you have a four-node cluster with three nodes upgraded to 6.0, and one node still on 5.5, you can still roll all nodes back to 5.5.
 
-Once all nodes in the cluster have been fully upgraded, the rollback window is closed.
-If after you fully upgrade a cluster, you decide that you need to downgrade to the previous version, your only option is to set up another Couchbase Server cluster and use XDCR with the target cluster running the older version.
+Once all nodes in a cluster have been fully upgraded, the rollback window is closed.
+If after you fully upgrade a cluster, you decide that you need to downgrade to the previous version, your only option is to set up a new Couchbase cluster running the older version, and then doing one of the following:
 
-Follow xref:upgrade-strategies.adoc#intercluster[Upgrading Using Intercluster Replication], having in mind that the new cluster would be the older version to which you are rolling back.
+* Use xref:learn:clusters-and-availability/xdcr-overview.adoc[XDCR] to replicate data to the new cluster, and then migrate all client connections to new cluster.
+* Restore data to the new cluster from a xref:backup-restore/backup-restore.adoc[backup].
 
 [#upgrade-community-enterprise]
 === Upgrading from Community to Enterprise

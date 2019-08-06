@@ -13,10 +13,10 @@ You can review the supported xref:upgrade.adoc#upgrade-paths[upgrade paths] to b
 
 == Step 2: Plan Your Upgrade Strategy
 
-Upgrading a Couchbase cluster is accomplished by upgrading each of its constituent nodes to a new version.
+Upgrading a Couchbase cluster is accomplished by upgrading each of its constituent nodes to the new version.
 The most common way to go about this is to perform a _rolling online upgrade_.
-Only once all of the nodes are running the same version, will the cluster be considered fully upgraded.
-Up until that point, if any node in the cluster is running a different version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
+Only once all of the nodes are running the new version, will the cluster be considered fully upgraded.
+Up until that point, if any node in the cluster is running the old version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
 
 Even though all nodes in a cluster have Couchbase Server installed on them, each node might only run one or more Couchbase xref:learn:services-and-indexes/services/services.adoc[Services].
 Some nodes might run the Data Service, while other nodes might be responsible for Index, Query, etc.
