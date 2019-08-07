@@ -13,7 +13,6 @@ Review the xref:release-notes:relnotes.adoc[release notes] for each release to u
 
 Upgrading a Couchbase cluster is accomplished by upgrading each of the cluster's constituent nodes to a new version of Couchbase Server.
 Only once all of the nodes are running the new version will the cluster be considered fully upgraded.
-Up until that point, if any node in the cluster is running the old version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
 
 === Upgrade Types
 
@@ -21,13 +20,18 @@ There are two principal types of upgrade: _online_ and _offline_.
 
 * _Online_: The cluster remains active and available while each node is upgraded.
 Nodes running the previous version of Couchbase Server need to be swapped with nodes that are running the new version of Couchbase Server.
-Swapping in brand-new nodes requires the fewest rebalances, and thus requires the least amount of time for completing the upgrade.
-However, online upgrades _can_ be completed using only the nodes currently in the cluster.
+Swapping in additional net-new nodes helps reduce the number of rebalances, and thus requires the least amount of time for completing the upgrade.
+However, online upgrades can be completed using only the nodes currently in the cluster.
 +
 When performing an online upgrade, it's important to know that nodes do not need to be upgraded _in-place_.
-That is to say: Even if you remove a node from a cluster, upgrade the Couchbase Server installation on that node, and then finally add that node back into the cluster, the cluster will still treat it like a brand new node, and will wipe any pre-existing data from the node.
+That is to say: Even if you remove a node from a cluster, then upgrade the Couchbase Server installation on that node, and then finally add that node back into the cluster, the cluster will still treat it like a brand new node, and will wipe any pre-existing Couchbase data and configuration from the node.
 This is because when you safely remove a node from an active cluster, that node passes all of its data to other online nodes, at which point that data can be changed at any time by a cluster user.
 By treating every node as a new node, the cluster keeps data consistent.
++
+Online upgrades rely heavily on a key function within Couchbase Server: The ability for a cluster to run in _mixed mode_.
+As nodes get added and removed throughout the upgrade, the cluster will, at times, be composed of varying numbers of nodes running the older version of Couchbase Server, and varying numbers of nodes running the newer version.
+Up until the point at which all of the active nodes in the cluster are running the newer version of Couchbase Server, the the cluster is considered to be in mixed mode.
+Certain considerations should be taken when the cluster is operating in mixed mode.
 
 * _Offline_: The cluster is taken offline while nodes are upgraded individually.
 For these upgrades to be performed safely, all application traffic to the entire cluster must be shut down.
@@ -37,28 +41,42 @@ This means that the existing Couchbase Server installation on each node needs to
 After the upgrade is complete, the nodes warm up and the cluster comes back online at full capacity.
 At this point, application traffic can resume to the upgraded cluster.
 
-Although you'll ultimately need to determine the best type of upgrade for your particular deployment, an online upgrade is recommended in almost all scenarios.
+A key principle to understand when it comes to upgrading Couchbase Server is that a node cannot be active while it is being upgraded.
+Therefore, the goal during upgrade should be one of two things: To keep the cluster _online_ by only upgrading nodes after they have safely passed on their responsibilities to other nodes in the cluster; or, to take the cluster _offline_, and upgrade all of the nodes individually, without the need to transfer anything between nodes.
 
-== Online Upgrades
+An online upgrade strategy is recommended in the vast majority of deployment scenarios.
+However, there may be cases, such as when a cluster is unstable, where an offline upgrade or other special type of upgrade is recommended.
+Since it's ultimately up to you to determine the best upgrade strategy for your particular deployment, you should review all of the sections on this page to help better understand your options.
 
-Online upgrade, also known as _rolling online upgrade_, is the preferred upgrade type and should be used unless special circumstances rule it out.
-An online upgrade doesn't cause downtime, since it uses Couchbase's rebalance capability to redistribute data amongst cluster nodes, keeping it available for the duration of the upgrade.
+If at any point you need help planning or performing an upgrade, please feel free to engage with Couchbase Support.
+
+== Online Upgrade
+
+Online upgrade, also known as a _rolling online upgrade_, is the preferred upgrade type, and should be used for most deployments unless special circumstances rule it out.
+This is because online upgrades don't require any downtime, and can be performed using the safest and most straightforward methods. 
 
 There are several options available for achieving a fully-online upgrade, each with their own advantages.
-Some options provide a faster upgrade, but come with less data redundancy, increasing risk.
+Some options provide a faster upgrade, but come with less data redundancy.
 Other options provide both better speed and better redundancy, but come at a higher resource cost.
 You should pick the option that best suits the needs of your deployment and budget.
 
-Swap Rebalance::
+[#online-upgrade-swap-rebalance]
+=== Swap-Rebalance Option
+
 This option provides the safest and most straightforward upgrade experience.
-Simply add n number of new nodes to the cluster, and at the same time, remove an equal number of existing nodes.
+It involves adding n number of nodes to the cluster, and at the same time, removing an equal number of existing nodes.
 If at the time of rebalance, n number of new nodes are marked for addition, and n nodes are marked for removal, the cluster will perform a _swap rebalance_.
-Data is copied efficiently from the existing nodes to the new nodes, without involving other nodes in the cluster.
-For nodes running the Data Service, this means that as soon as a vBucket is completely copied and synced on the new node, the Cluster Manager will seamlessly activate that vBucket on the new node, and deactivate it on the old node.
-This same behavior of copying, syncing, and activating/deactivating occurs for all services and data types, including index partitions.
-+
-The general process of using the swap rebalance option is as follows:
-+
+
+During a swap rebalance of Data Service nodes, vBuckets are copied efficiently between the nodes that are being removed and the nodes that are being added.
+This means that as soon as a vBucket is completely copied and synced on the new node, the Cluster Manager will seamlessly activate that vBucket on the new node, and deactivate it on the old node.
+For other Couchbase services, replica data is merely redistributed, not copied.
+This means that for services like Index and Search, the indexes are rebuilt on the active nodes.
+
+==== Determining Which Nodes to Swap
+
+
+
+==== General Swap Rebalance Upgrade Strategy
 --
 . Configure as many new nodes as your budget and environment allow.
 +
@@ -70,7 +88,7 @@ Hardware resources should be the same or greater, so that the new node can handl
 The new node should also be configured to be within the same topology.
 For example, it should reside in the same availability/failure zone.
 
-. New nodes need to have the the desired new version of Couchbase Server installed on them, and the Couchbase service needs to be running.
+. New nodes need to have the desired new version of Couchbase Server installed on them, and the Couchbase service needs to be running.
 +
 This is also a good time to make platform updates to your deployment.
 If every new node that you swap in is running the latest versions of your desired platform software (operating system, drivers, etc.), then by the time the entire cluster upgrade is complete, you'll have upgraded your entire platform as well.
@@ -87,19 +105,38 @@ NOTE: It's important to remember that when adding new nodes to a cluster, any pr
 This is desired behavior during online upgrades, because the data has already been distributed and activated on the cluster.
 This is different from offline upgrades, where no new nodes are added to the cluster, and all data and configuration information remains on the same nodes throughout the upgrade process.
 
-. If there are no remaining active nodes running the older version of Couchbase Server, then the upgrade is complete.
-The cluster should have the same configuration and topology that it had before the upgrade began, except that now it is running a newer version of Couchbase Server.
---
+. If there are nodes remaining in the cluster that are still running the previous version of Couchbase Server, then the cluster is considered to be running in _mixed mode_.
+If there are no remaining active nodes running the previous version of Couchbase Server, then the upgrade is considered complete.
 +
-Key takeaways:
+The upgraded cluster should have the same configuration and topology that it had before the upgrade began, except that now it is running a newer version of Couchbase Server.
+--
 
-* Swap rebalances are the safest and most straightforward option for upgrading a Couchbase cluster.
-However, a rebalance is required every time nodes are swapped, which can increase the time it takes to upgrade.
-If your budget allows, you can choose to increase the number of new nodes, which in turn will allow you to swap out more old nodes at once, which can reduce the number of rebalances required to complete the upgrade.
+==== Key Takeaways
+* Swap-rebalance is the safest, most performant, and most straightforward option for a fully-online upgrade of Couchbase cluster.
+Adding net-new nodes during the upgrade has the effect of adding excess capacity to the cluster, which means that you don't have to worry about increasing workload on other nodes.
+* A rebalance is required each time nodes are swapped, which can increase the time it takes to upgrade.
+However, you are allowed the flexibility to increase the number of new nodes added to the cluster, which in turn allows you to swap out more old nodes at once, reducing the number of rebalances required to complete the upgrade.
 * As long as you swap an equal number of nodes (e.g. one for one, two for two, etc.), a swap rebalance will be triggered.
 * New nodes should have the resources and capacity to handle the workload of the nodes that they are replacing. This keeps cluster capacity consistent, ensuring the fastest possible upgrade and the best possible performance.
 
-Remove and Rebalance::
+=== Remove-Rebalance Option
+
+This option is meant to be used when an upgrade must be completed using only the nodes that are currently in the cluster.
+It involves removing a node from the cluster, upgrading that node to a new version of Couchbase Server, and then adding it back into the cluster as a new node.
+When the node is removed from the cluster, its data and workload is seamlessly passed on to the other active nodes in the cluster.
+
+The remove-rebalance option is similar to the <<online-upgrade-swap-rebalance,swap-rebalance>> option in that both options involve removing nodes from the cluster while simultaneously transferring their data and workload to other active nodes.
+In the swap-rebalance scenario, resource constraints aren't really a factor since new cluster capacity is introduced at the beginning of the upgrade.
+However, in a remove-rebalance scenario, no new capacity is added to the cluster.
+This means that when a node is removed, the cluster will operate at reduced capacity until the node is upgraded and added back into the cluster.
+Note that this doesn't necessarily mean that 
+
+Because remove-rebalance upgrades reduce cluster capacity, you need to make sure that there is enough spare capacity across all necessary resources (disk, CPU, RAM, etc.) during the upgrade process.
+
+This is in contrast with the <<online-upgrade-swap-rebalance,swap-rebalance>> option, where the workload is transferred to 
+
+It is a good alternative to the <<online-upgrade-swap-rebalance,swap rebalance>> option, because it maintains similar high availability throughout the upgrade process.
+
 This method is suitable when you must complete the upgrade using only the nodes currently in the cluster but want to maintain High Availability during the upgrade process.
 Since this will reduce the capacity of the cluster, it is important to ensure that there is enough spare capacity across all necessary resources (disk, CPU, RAM, etc) during the upgrade process.
 This process involves removing one running node from the cluster and rebalancing.
