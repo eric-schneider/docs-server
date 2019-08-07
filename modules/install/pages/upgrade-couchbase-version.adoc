@@ -1,9 +1,9 @@
 = Upgrade to Couchbase Server 6.5
 :page-aliases: install:upgrade-strategy-for-features,
 
-This page shows you how to upgrade to the latest 6.5 release, incurring little to no downtime.
+This page shows you how to upgrade to the latest 6.5 release using an xref:upgrade.adoc#upgrade-types[online rolling upgrade], incurring little to no downtime.
 
-== Step 1: Verify that you're ready for upgrade
+== Verify Your Upgrade Path
 
 Couchbase Server supports direct upgrades up to one major version ahead.
 That means, you can upgrade to version 6.5 from any version in the 5.x or 6.0.x series of releases.
@@ -11,20 +11,38 @@ That means, you can upgrade to version 6.5 from any version in the 5.x or 6.0.x 
 If you're upgrading from a version older than 5.x, you need to upgrade to an intermediate release before you can upgrade to version 6.5.
 You can review the supported xref:upgrade.adoc#upgrade-paths[upgrade paths] to better understand your options. 
 
-== Step 2: Plan Your Upgrade Strategy
+== Plan Your Upgrade Strategy
 
 Upgrading a Couchbase cluster is accomplished by upgrading each of its constituent nodes to the new version.
-The most common way to go about this is to perform a _rolling online upgrade_.
+The most common way to upgrade a cluster is by performing an xref:upgrade.adoc#upgrade-types[online upgrade].
 Only once all of the nodes are running the new version, will the cluster be considered fully upgraded.
 Up until that point, if any node in the cluster is running the old version of Couchbase Server, then the entire cluster is considered to be in _mixed mode_.
 
 Even though all nodes in a cluster have Couchbase Server installed on them, each node might only run one or more Couchbase xref:learn:services-and-indexes/services/services.adoc[Services].
 Some nodes might run the Data Service, while other nodes might be responsible for Index, Query, etc.
-This has two practical implications:
+This has two practical implications for upgrade:
 
-. When you take a node offline to 
-. When Couchbase Server is upgraded on a node, all of the services on that node are upgraded as well.
+=== Ensure Proper Service Coverage
 
+A given Couchbase service must always be running on an active node to avoid disruption and downtime.
+
+When you remove one or more nodes from a cluster (in this case, for the purposes of upgrade), the cluster will take the data and workloads from the removed nodes and transfer them to other active nodes in the cluster on a service-for-service basis.
+What this means is that if, for example, you remove a node that is running the Data Service, the cluster will transfer that node's vBuckets and replica vBuckets to other nodes running the Data Service.
+Similarly, if you remove a node that is running the Index Service, the cluster will rebuild those indexes on other nodes running the Index Service.
+
+If you don't have any active nodes in the cluster that are running the same services as the nodes you are taking out, then those services will experience downtime until the nodes become active again.
+In addition, even if you have multiple active nodes running the same service, they must also have enough spare capacity to take on the data and workloads of the removed nodes, otherwise you may experience disruptions in that service.
+
+=== Prepare for Feature Upgrades
+
+Depending on the size and scope of a release, a new version of Couchbase Server may come with several new features and enhancements.
+New features generally appear on a node immediately after it has been upgraded.
+For example, if your cluster is operating in mixed mode, with some of
+For example, if you log into the Couchbase Web Console on a node that has been upgraded, you may see new features and options available, even though other nodes in the clusteronce you upgrade a node and add it into the cluster, you 
+
+When you upgrade Couchbase Server on a node, all of the services on that node are upgraded as well.
+
+Most new features and 
 
 
 In most production environments, each workload is isolated to its own set of nodes.
@@ -34,11 +52,11 @@ For more information on this, see xref:upgrade-online.adoc[Performing the Rollin
 
 During the upgrade, your cluster can have a mix of the new and current versions of the query, index, or data services.
 
-== Data Service
+Data Service
 
 You can upgrade the Data service from version 4.0 directly to the latest version 4.1 using any supported upgrade strategy
 
-== Index Service
+Index Service
 
 The Index service with global secondary indexes (GSI) does not provide built-in replicas.
 Administrators need to create identical indexes on the separate index service nodes to gain high availability.
@@ -54,7 +72,7 @@ When upgrading the Index service, make sure to fulfill these requirements:
 * Upgrade the node with the Index service and add it back to the cluster using one of the recommended techniques (swap rebalance, offline upgrade, and so on).
 * Recreate all indexes on the upgraded node.
 
-== Query Service
+Query Service
 
 The Query service can be upgraded to a new version by taking the node offline.
 However, there are few things to keep in mind:
@@ -62,6 +80,26 @@ However, there are few things to keep in mind:
 * Make sure there are no running or executing queries since those will be killed when the node is taken offline.
 * To avoid downtime for your application, add a new query service node with the new version and swap the older node out.
 
+== Prepare for Upgrade
+
+Before starting the upgrade, complete the following steps.
+
+. Verify the overall health of the cluster from the Couchbase Web Console.
++
+* Under [.ui]*Servers*, ensure that only active nodes are listed, and that they have a green status.
+Nodes should not be failed over, marked for addition/removal, or in the process of rebalancing.
+If any of the nodes are failed over, offline, or have any other type of unhealthy status, you need to identify the cause and either bring them back online to normal running status, or remove them.
++
+* Under [.ui]*Servers > Statistics*, check that resource capacity is adequate enough for your upgrade strategy.
+If you're not swapping in any net-new nodes, you need to ensure that you have enough spare capacity to handle nodes coming in and out of the cluster.
+* Ensure that buckets and indexes have an adequate number of replicas to ensure that you meet the desired availability levels for your upgrade strategy. 
+
+. Create a xref:backup-restore:backup-restore.adoc[backup] of the cluster.
+It's good practice to create a backup before upgrading a cluster.
+You can use this backup to restore your cluster to its pre-upgraded state for the purposes of xref:upgrade.adoc#rollback-downgrade[downgrade] or disaster recovery.
+
+. As an extra precautionary measure, you should capture diagnostic information for the cluster by running the xref:cli/cbcollect-info-tool.adoc[`cbcollect_info`] tool.
+If you encounter troubles during the upgrade, this diagnostic information can aid in troubleshooting the issue.
 
 == Step 2: Prepare for the Upgrade
 

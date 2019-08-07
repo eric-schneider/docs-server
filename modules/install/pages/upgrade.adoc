@@ -14,6 +14,7 @@ Review the xref:release-notes:relnotes.adoc[release notes] for each release to u
 Upgrading a Couchbase cluster is accomplished by upgrading each of the cluster's constituent nodes to a new version of Couchbase Server.
 Only once all of the nodes are running the new version will the cluster be considered fully upgraded.
 
+[#upgrade-types]
 === Upgrade Types
 
 There are two principal types of upgrade: _online_ and _offline_.
@@ -45,7 +46,7 @@ A key principle to understand when it comes to upgrading Couchbase Server is tha
 Therefore, the goal during upgrade should be one of two things: To keep the cluster _online_ by only upgrading nodes after they have safely passed on their responsibilities to other nodes in the cluster; or, to take the cluster _offline_, and upgrade all of the nodes individually, without the need to transfer anything between nodes.
 
 An online upgrade strategy is recommended in the vast majority of deployment scenarios.
-However, there may be cases, such as when a cluster is unstable, where an offline upgrade or other special type of upgrade is recommended.
+However, there may be cases, such as when a cluster is unstable, where an offline upgrade or other special type of upgrade might be recommended.
 Since it's ultimately up to you to determine the best upgrade strategy for your particular deployment, you should review all of the sections on this page to help better understand your options.
 
 If at any point you need help planning or performing an upgrade, please feel free to engage with Couchbase Support.
@@ -73,6 +74,10 @@ For other Couchbase services, replica data is merely redistributed, not copied.
 This means that for services like Index and Search, the indexes are rebuilt on the active nodes.
 
 ==== Determining Which Nodes to Swap
+
+To perform a swap-rebalance, you need a minimum of one spare node.
+The spare node can be a net-new node that you've prepared solely for the purposes of upgrade, or it can be an existing node that you've removed from the cluster, upgraded, and are adding back into the cluster.
+
 
 
 
@@ -214,7 +219,8 @@ So, for example, if a cluster is running version 4.x, it can be upgraded directl
 Be aware of the currently-supported versions of Couchbase Server, as well as the versions that are at or near their end of life.
 This information can be found in the http://www.couchbase.com/support-policy[Couchbase Support Policy^].
 
-=== Downgrades and Limitations
+[#rollback-downgrade]
+=== Rollbacks and Downgrades
 
 Once you begin upgrading a Couchbase cluster, you can still roll back to the previous version, as long as at least one node is still on the previous version.
 For example, if you have a four-node cluster with three nodes upgraded to 6.0, and one node still on 5.5, you can still roll all nodes back to 5.5.
