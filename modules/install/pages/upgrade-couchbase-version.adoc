@@ -24,19 +24,31 @@ This has two practical implications for upgrade:
 
 === Ensure Proper Service Coverage
 
-A given Couchbase service must always be running on an active node to avoid disruption and downtime.
+A given Couchbase service must always be running on an active node to avoid downtime.
 
 When you remove one or more nodes from a cluster (in this case, for the purposes of upgrade), the cluster will take the data and workloads from the removed nodes and transfer them to other active nodes in the cluster on a service-for-service basis.
-What this means is that if, for example, you remove a node that is running the Data Service, the cluster will transfer that node's vBuckets and replica vBuckets to other nodes that are running the Data Service.
-The same goes for the other services; if you remove a node that is running the Index Service, the cluster will rebuild those indexes on other nodes running the Index Service.
+What this means is that if, for example, you remove a node that is running the Data Service, the cluster will transfer that node's vBuckets and replica vBuckets to active nodes that are running the Data Service.
+The same goes for the other services; if you remove a node that is running the Index Service, the cluster will rebuild those indexes on other active Index nodes.
 The practical implication of this is that if you don't have any active nodes in the cluster that are running the same services as the nodes that you are taking out, then those services will experience downtime until the nodes become active again.
 
-The best way to ensure 
+Let's examine some example node topologies and how you would ensure service coverage for them.
+(In these examples, Index nodes are used.)
+
+* One Index node in cluster
+** Option 1: Remove
++
+Since there is only one Index node in the cluster, removing it would cause indexes to become inaccessible while the node is being upgraded.
+** Option 2: Swap Rebalance
++
+Adding a new Index node before removing the existing node will allow the existing node to seamlessly transfer indexes to the new node, without any disruption.
+
+
 
 This means that if you have a service deployed on only one node in your cluster, you 
 In addition, even if you have multiple active nodes running the same service, they must have enough spare capacity to take on the data and workloads of the removed nodes, otherwise you may experience disruptions in that service.
 
 The best way to ensure proper service coverage is to perform a swap-rebalance using new nodes.
+
 
 === Prepare for Feature Upgrades
 
